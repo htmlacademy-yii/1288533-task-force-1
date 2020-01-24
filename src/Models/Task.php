@@ -1,4 +1,5 @@
 <?php
+namespace TaskForce\Models;
 
 class Task
 {
@@ -13,19 +14,21 @@ class Task
     public const ACTION_COMPLETE = 'action_complete';
     public const ACTION_REFUSE = 'action_refuse';
 
-    public $currentStatus;
+    /** @var string - Текущий статус таска */
+    public $currentStatus = self::STATUS_NEW;
 
+    /** @var int - ID автора таска */
     private $authorId;
+    /** @var int|null - ID исполнителя таска */
     private $assigneeId;
 
     /**
-     * @param int $authorId ID автора
-     * @param int $assigneeId ID исполнителя
+     * @param int $authorId - ID автора таска
+     * @param int|null $assigneeId - ID исполнителя таска
      * @return void
      */
     public function __construct(int $authorId, ?int $assigneeId = null)
     {
-        $this->currentStatus = self::STATUS_NEW;
         $this->authorId = $authorId;
         $this->assigneeId = $assigneeId;
     }
@@ -71,16 +74,18 @@ class Task
     {
         $status = $this->currentStatus;
 
-        if ($action === self::ACTION_CANCEL) {
-            $status = self::STATUS_CANCELED;
-        }
+        switch ($action) {
+            case self::ACTION_CANCEL:
+                $status = self::STATUS_CANCELED;
+                break;
 
-        if ($action === self::ACTION_COMPLETE) {
-            $status = self::STATUS_COMPLETED;
-        }
+            case self::ACTION_COMPLETE:
+                $status = self::STATUS_COMPLETED;
+                break;
 
-        if ($action === self::ACTION_REFUSE) {
-            $status = self::STATUS_FAILED;
+            case self::ACTION_REFUSE:
+                $status = self::STATUS_FAILED;
+                break;
         }
 
         return $status;

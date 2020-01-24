@@ -1,0 +1,15 @@
+{
+    "name": "rkonkin/1288533-task-force-1",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Roman Konkin",
+            "email": "k.ramzes.r@gmail.com"
+        }
+    ],
+    "autoload": {
+      "psr-4": {
+        "TaskForce\\": "src/"
+      }
+    }
+}

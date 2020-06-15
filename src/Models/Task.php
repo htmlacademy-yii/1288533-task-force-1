@@ -1,6 +1,14 @@
 <?php
 namespace TaskForce\Models;
 
+use TaskForce\Actions\AbstractAction;
+use TaskForce\Actions\ActionCancel;
+use TaskForce\Actions\ActionComplete;
+use TaskForce\Actions\ActionRespond;
+use TaskForce\Actions\ActionRefuse;
+
+require_once 'vendor/autoload.php';
+
 class Task
 {
     public const STATUS_NEW = 'status_new';
@@ -8,11 +16,6 @@ class Task
     public const STATUS_IN_PROGRESS = 'status_in_progress';
     public const STATUS_COMPLETED = 'status_completed';
     public const STATUS_FAILED = 'status_failed';
-
-    public const ACTION_CANCEL = 'action_cancel';
-    public const ACTION_RESPOND = 'action_respond';
-    public const ACTION_COMPLETE = 'action_complete';
-    public const ACTION_REFUSE = 'action_refuse';
 
     /** @var string - Текущий статус таска */
     public $currentStatus = self::STATUS_NEW;
@@ -57,10 +60,10 @@ class Task
     public function getActions(): array
     {
         return [
-            self::ACTION_CANCEL => 'Отменить',
-            self::ACTION_RESPOND => 'Откликнуться',
-            self::ACTION_COMPLETE => 'Выполнено',
-            self::ACTION_REFUSE => 'Отказаться',
+            new ActionCancel(),
+            new ActionRespond(),
+            new ActionComplete(),
+            new ActionRefuse(),
         ];
     }
 
@@ -73,17 +76,20 @@ class Task
     public function getNextStatus(string $action): string
     {
         $status = $this->currentStatus;
+        $actionCancel = new ActionCancel();
+        $actionComplete = new ActionComplete();
+        $actionRefuse = new ActionRefuse();
 
         switch ($action) {
-            case self::ACTION_CANCEL:
+            case $actionCancel->getInternalName():
                 $status = self::STATUS_CANCELED;
                 break;
 
-            case self::ACTION_COMPLETE:
+            case $actionComplete->getInternalName():
                 $status = self::STATUS_COMPLETED;
                 break;
 
-            case self::ACTION_REFUSE:
+            case $actionRefuse->getInternalName():
                 $status = self::STATUS_FAILED;
                 break;
         }
@@ -92,23 +98,54 @@ class Task
     }
 
     /**
-     * Получить доступные действия для переданного статуса
+     * Получить доступные действия
      *
-     * @param string $status
+     * @param int authId - ID авторизованного пользователя
+     * @param string $status - статус таска
      * @return array
      */
-    public function getAvailableActions(string $status): array
+    public function getAvailableActions(int $authId, string $status): array
     {
         $actions = [];
 
         if ($status === self::STATUS_NEW) {
-            $actions = [self::ACTION_CANCEL, self::ACTION_RESPOND];
+            $actions = $this->filterAvailableActionsByAuth(
+                [new ActionCancel(), new ActionRespond()],
+                $authId
+            );
         }
 
         if ($status === self::STATUS_IN_PROGRESS) {
-            $actions = [self::ACTION_COMPLETE, self::ACTION_REFUSE];
+            $actions = $this->filterAvailableActionsByAuth(
+                [new ActionComplete(), new ActionRefuse()],
+                $authId
+            );
         }
 
         return $actions;
+    }
+
+    /**
+     * Отфильтровать доступные действия в зависимости
+     * от авторизованного пользователя
+     *
+     * @param array AbstractAction[] $actions - действия
+     * @param int $authId - ID авторизованного пользователя
+     * @return array
+     */
+    private function filterAvailableActionsByAuth(array $actions, int $authId): array
+    {
+        $filtered =  array_filter(
+            $actions,
+            function(AbstractAction $action) use ($authId) {
+                return $action->isAvailable(
+                    $authId,
+                    $this->authorId,
+                    $this->assigneeId
+                );
+            }
+        );
+
+        return array_values($filtered);
     }
 }

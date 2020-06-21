@@ -1,27 +1,38 @@
 <?php
 use TaskForce\Models\Task;
+use TaskForce\Actions\ActionCancel;
+use TaskForce\Actions\ActionComplete;
+use TaskForce\Actions\ActionRespond;
+use TaskForce\Actions\ActionRefuse;
 
 require_once 'vendor/autoload.php';
 
-$task = new Task(1);
+$authorId = 1;
+$assigneeId = 2;
+
+$task = new Task($authorId, $assigneeId);
+$actionCancel = new ActionCancel();
+$actionComplete = new ActionComplete();
+$actionRefuse = new ActionRefuse();
+$actionRespond = new ActionRespond();
 
 assert($task->currentStatus === Task::STATUS_NEW, 'new task status');
 
 assert(
-    $task->getNextStatus(Task::ACTION_CANCEL) === Task::STATUS_CANCELED,
-    'cancel action'
+    $task->getNextStatus($actionCancel->getInternalName()) === Task::STATUS_CANCELED,
+    'action cancel'
 );
 assert(
-    $task->getNextStatus(Task::ACTION_RESPOND) === $task->currentStatus,
-    'respond action'
+    $task->getNextStatus($actionRespond->getInternalName()) === $task->currentStatus,
+    'action respond'
 );
 assert(
-    $task->getNextStatus(Task::ACTION_COMPLETE) === Task::STATUS_COMPLETED,
-    'complete action'
+    $task->getNextStatus($actionComplete->getInternalName()) === Task::STATUS_COMPLETED,
+    'action complete'
 );
 assert(
-    $task->getNextStatus(Task::ACTION_REFUSE) === Task::STATUS_FAILED,
-    'refuse action'
+    $task->getNextStatus($actionRefuse->getInternalName()) === Task::STATUS_FAILED,
+    'action refuse'
 );
 assert(
     $task->getNextStatus('unknown') === $task->currentStatus,
@@ -29,30 +40,34 @@ assert(
 );
 
 assert(
-    $task->getAvailableActions($task->currentStatus) === [Task::ACTION_CANCEL, Task::ACTION_RESPOND],
-    'current status'
+    $task->getAvailableActions($authorId, TASK::STATUS_NEW) == [$actionCancel],
+    'action cancel for author'
 );
 assert(
-    $task->getAvailableActions(Task::STATUS_NEW) === [Task::ACTION_CANCEL, Task::ACTION_RESPOND],
-    'new status'
+    $task->getAvailableActions($assigneeId, TASK::STATUS_NEW) == [$actionRespond],
+    'action respond for assignee'
 );
 assert(
-    $task->getAvailableActions(Task::STATUS_IN_PROGRESS) === [Task::ACTION_COMPLETE, Task::ACTION_REFUSE],
-    'in progress status'
+    $task->getAvailableActions($authorId, TASK::STATUS_IN_PROGRESS) == [$actionComplete],
+    'action complete for author'
 );
 assert(
-    $task->getAvailableActions(Task::STATUS_FAILED) === [],
-    'failed status'
+    $task->getAvailableActions($assigneeId, TASK::STATUS_IN_PROGRESS) == [$actionRefuse],
+    'action refuse for assignee'
 );
 assert(
-    $task->getAvailableActions(Task::STATUS_COMPLETED) === [],
-    'completed status'
+    $task->getAvailableActions($authorId, Task::STATUS_FAILED) === [],
+    'no actions for failed status'
 );
 assert(
-    $task->getAvailableActions(Task::STATUS_CANCELED) === [],
-    'canceled status'
+    $task->getAvailableActions($authorId,Task::STATUS_COMPLETED) === [],
+    'no actions for completed status'
 );
 assert(
-    $task->getAvailableActions('unknown') === [],
-    'unknown status'
+    $task->getAvailableActions($assigneeId,Task::STATUS_CANCELED) === [],
+    'no actions for canceled status'
+);
+assert(
+    $task->getAvailableActions($assigneeId,'unknown') === [],
+    'no actions for unknown status'
 );

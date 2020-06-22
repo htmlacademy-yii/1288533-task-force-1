@@ -8,16 +8,19 @@ class ActionRefuse extends AbstractAction
     private const READABLE_NAME = 'Отказаться';
     private const INTERNAL_NAME = 'action_refuse';
 
+    /** @inheritDoc */
     public function getReadableName(): string
     {
         return self::READABLE_NAME;
     }
 
+    /** @inheritDoc */
     public function getInternalName(): string
     {
         return self::INTERNAL_NAME;
     }
 
+    /** @inheritDoc */
     public function isAvailable($authId, $authorId, $assigneeId): bool
     {
         return $authId === $assigneeId;

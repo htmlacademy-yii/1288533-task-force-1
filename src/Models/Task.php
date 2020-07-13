@@ -8,6 +8,8 @@ use TaskForce\Actions\ActionCancel;
 use TaskForce\Actions\ActionComplete;
 use TaskForce\Actions\ActionRespond;
 use TaskForce\Actions\ActionRefuse;
+use TaskForce\Exceptions\TaskStatusException;
+use TaskForce\Exceptions\AvailableActionException;
 
 require_once 'vendor/autoload.php';
 
@@ -33,10 +35,19 @@ class Task
      * @param string $currentStatus - Текущий статус таска
      * @param int $authorId - ID автора таска
      * @param int|null $assigneeId - ID исполнителя таска
+     *
+     * @throws TaskStatusException - если передан несуществующий статус
+     *
      * @return void
      */
     public function __construct(string $currentStatus, int $authorId, ?int $assigneeId = null)
     {
+        $statuses = array_keys($this->getStatuses());
+
+        if (!in_array($currentStatus, $statuses)) {
+            throw new TaskStatusException('Несуществующий статус задания.');
+        }
+
         $this->currentStatus = $currentStatus;
         $this->authorId = $authorId;
         $this->assigneeId = $assigneeId;
@@ -108,10 +119,17 @@ class Task
      *
      * @param string $role - роль пользователя
      * @param string $status - статус таска
+     *
+     * @throws AvailableActionException - если передан несуществующий статус
+     *
      * @return array
      */
     public function getAvailableActions(string $role, string $status): array
     {
+        if (!in_array($role, [self::ROLE_AUTHOR, self::ROLE_ASSIGNEE])) {
+            throw new AvailableActionException('Несуществующая роль.');
+        }
+
         $actions = [];
         $authId = null;
 

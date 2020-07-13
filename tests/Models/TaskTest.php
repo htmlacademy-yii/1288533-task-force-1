@@ -4,13 +4,21 @@ use TaskForce\Actions\ActionCancel;
 use TaskForce\Actions\ActionComplete;
 use TaskForce\Actions\ActionRespond;
 use TaskForce\Actions\ActionRefuse;
+use TaskForce\Exceptions\TaskStatusException;
 
 require_once 'vendor/autoload.php';
 
 $authorId = 1;
 $assigneeId = 2;
+$task = null;
 
-$task = new Task(Task::STATUS_NEW, $authorId, $assigneeId);
+try {
+    $task = new Task(Task::STATUS_NEW, $authorId, $assigneeId);
+} catch (TaskStatusException $error) {
+    error_log($error->getMessage());
+    die();
+}
+
 $actionCancel = new ActionCancel();
 $actionComplete = new ActionComplete();
 $actionRefuse = new ActionRefuse();

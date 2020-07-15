@@ -1,4 +1,6 @@
 <?php
+declare(strict_types = 1);
+
 namespace TaskForce\Models;
 
 use TaskForce\Actions\AbstractAction;
@@ -6,6 +8,8 @@ use TaskForce\Actions\ActionCancel;
 use TaskForce\Actions\ActionComplete;
 use TaskForce\Actions\ActionRespond;
 use TaskForce\Actions\ActionRefuse;
+use TaskForce\Exceptions\TaskStatusException;
+use TaskForce\Exceptions\AvailableActionException;
 
 require_once 'vendor/autoload.php';
 
@@ -17,21 +21,34 @@ class Task
     public const STATUS_COMPLETED = 'status_completed';
     public const STATUS_FAILED = 'status_failed';
 
-    /** @var string - Текущий статус таска */
-    public $currentStatus = self::STATUS_NEW;
+    public const ROLE_AUTHOR = 'role_author';
+    public const ROLE_ASSIGNEE = 'role_assignee';
 
+    /** @var string - Текущий статус таска */
+    private $currentStatus;
     /** @var int - ID автора таска */
     private $authorId;
     /** @var int|null - ID исполнителя таска */
     private $assigneeId;
 
     /**
+     * @param string $currentStatus - Текущий статус таска
      * @param int $authorId - ID автора таска
      * @param int|null $assigneeId - ID исполнителя таска
+     *
+     * @throws TaskStatusException - если передан несуществующий статус
+     *
      * @return void
      */
-    public function __construct(int $authorId, ?int $assigneeId = null)
+    public function __construct(string $currentStatus, int $authorId, ?int $assigneeId = null)
     {
+        $statuses = array_keys($this->getStatuses());
+
+        if (!in_array($currentStatus, $statuses)) {
+            throw new TaskStatusException('Несуществующий статус задания.');
+        }
+
+        $this->currentStatus = $currentStatus;
         $this->authorId = $authorId;
         $this->assigneeId = $assigneeId;
     }
@@ -100,13 +117,29 @@ class Task
     /**
      * Получить доступные действия
      *
-     * @param int authId - ID авторизованного пользователя
+     * @param string $role - роль пользователя
      * @param string $status - статус таска
+     *
+     * @throws AvailableActionException - если передан несуществующий статус
+     *
      * @return array
      */
-    public function getAvailableActions(int $authId, string $status): array
+    public function getAvailableActions(string $role, string $status): array
     {
+        if (!in_array($role, [self::ROLE_AUTHOR, self::ROLE_ASSIGNEE])) {
+            throw new AvailableActionException('Несуществующая роль.');
+        }
+
         $actions = [];
+        $authId = null;
+
+        if ($role === self::ROLE_AUTHOR) {
+            $authId = $this->authorId;
+        }
+
+        if ($role === self::ROLE_ASSIGNEE) {
+            $authId = $this->assigneeId;
+        }
 
         if ($status === self::STATUS_NEW) {
             $actions = $this->filterAvailableActionsByAuth(
